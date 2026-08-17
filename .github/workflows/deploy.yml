@@ -151,13 +151,15 @@ jobs:
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
         run: |
-          # Affiche le contexte actif pour le debug
-          kubectl config current-context
-          kubectl config view
+          # Récupère automatiquement le premier contexte valide trouvé dans le kubeconfig
+          CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
+          echo "Utilisation du contexte : $CONTEXT"
           
-          # Force l'utilisation du serveur sur le port 6443 si besoin
-          kubectl config set-cluster default --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
+          # Définit ce contexte comme le contexte courant et met à jour l'URL du serveur
+          kubectl config use-context "$CONTEXT"
+          kubectl config set-cluster "$CONTEXT" --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
           
+          # Test de connexion
           kubectl get nodes --request-timeout=30s
 
       - name: Install Traefik if missing
