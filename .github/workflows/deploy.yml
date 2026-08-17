@@ -148,6 +148,8 @@ jobs:
           done
 
       - name: Wait for cluster
+        env:
+          KUBECONFIG: ${{ env.KUBECONFIG }}
         run: kubectl get nodes --request-timeout=30s
 
       - name: Install Traefik if missing
