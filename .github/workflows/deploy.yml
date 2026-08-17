@@ -132,7 +132,7 @@ jobs:
           aws ssm get-command-invocation \
             --instance-id "$INSTANCE_ID" \
             --command-id "$COMMAND_ID" \
-            --query "StandardOutputContent" --output text > kubeconfig.yaml
+            --query "StandardOutputContent" --output text | tr -d '\r' > kubeconfig.yaml
 
           # On garde 127.0.0.1 tel quel — le tunnel SSM (étape suivante) l'exposera localement sur le runner
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
