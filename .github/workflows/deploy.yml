@@ -146,14 +146,6 @@ jobs:
             echo "Attente du tunnel SSM... ($i/10)"
             sleep 3
           done
-      - name: Verify kubeconfig
-        run: |
-          echo "=== Kubeconfig Content ==="
-          cat $KUBECONFIG
-          echo "=== Server endpoint ==="
-          grep "server:" $KUBECONFIG
-          echo "=== Tunnel check ==="
-          nc -zv 127.0.0.1 6443   
 
       - name: Wait for cluster
         env:
