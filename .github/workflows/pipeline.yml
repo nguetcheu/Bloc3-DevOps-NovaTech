@@ -56,4 +56,3 @@ jobs:
     with:
       environment: production
     secrets: inherit
-    
