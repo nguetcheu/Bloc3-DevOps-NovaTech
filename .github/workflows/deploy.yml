@@ -122,6 +122,11 @@ jobs:
             --command-id "$COMMAND_ID" \
             --query "StandardOutputContent" --output text | tr -d '\r' > kubeconfig.yaml
 
+          # Forcer un nom de contexte propre et pointer vers le tunnel local 6443
+          kubectl --kubeconfig=kubeconfig.yaml config set-cluster k3s-cluster --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
+          kubectl --kubeconfig=kubeconfig.yaml config set-context k3s-context --cluster=k3s-cluster --user=default
+          kubectl --kubeconfig=kubeconfig.yaml config use-context k3s-context
+
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
 
       - name: Install Session Manager plugin
@@ -150,16 +155,7 @@ jobs:
       - name: Wait for cluster
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
-        run: |
-          # Récupère automatiquement le premier contexte valide trouvé dans le kubeconfig
-          CONTEXT=$(kubectl config view -o jsonpath='{.contexts[0].name}')
-          echo "Utilisation du contexte : $CONTEXT"
-          
-          # Définit ce contexte comme le contexte courant et met à jour l'URL du serveur
-          kubectl config use-context "$CONTEXT"
-          kubectl config set-cluster "$CONTEXT" --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
-          
-          # Test de connexion
+        run: 
           kubectl get nodes --request-timeout=30s
 
       - name: Install Traefik if missing
