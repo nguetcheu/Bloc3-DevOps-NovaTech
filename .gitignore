@@ -8,3 +8,4 @@ build/
 *.terraform.lock.hcl
 *.terraform
 *secret.auto.tfvars
+terraform/novatech-k3s-key.pem
