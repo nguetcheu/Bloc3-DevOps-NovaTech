@@ -124,17 +124,21 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["cat /etc/rancher/k3s/k3s.yaml"]' \
+            --parameters 'commands=["sudo cat /etc/rancher/k3s/k3s.yaml"]' \
             --query "Command.CommandId" --output text)
 
-          sleep 5
+          echo "Command ID: $COMMAND_ID. Attente de l'exécution..."
+          sleep 6
 
+          # Récupération directe dans le fichier avec vérification
           aws ssm get-command-invocation \
             --instance-id "$INSTANCE_ID" \
             --command-id "$COMMAND_ID" \
             --query "StandardOutputContent" --output text | tr -d '\r' > kubeconfig.yaml
 
-          # On garde 127.0.0.1 tel quel — le tunnel SSM (étape suivante) l'exposera localement sur le runner
+          echo "Taille du fichier kubeconfig.yaml généré :"
+          ls -l kubeconfig.yaml
+
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
       
       - name: Install Session Manager plugin
