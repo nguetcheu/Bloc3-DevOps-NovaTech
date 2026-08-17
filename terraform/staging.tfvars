@@ -28,6 +28,7 @@ instance_type = "t4g.medium"
 
 key_name = "novatech-k3s-key"
 
+#ssh_allowed_cidr = "176.141.164.220/32"
 
 # ============================================================
 # RDS POSTGRESQL
