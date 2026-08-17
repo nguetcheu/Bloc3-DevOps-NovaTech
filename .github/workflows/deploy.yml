@@ -152,6 +152,10 @@ jobs:
             sleep 3
           done
 
+          # AJOUTE CETTE PAUSE DE SÉCURITÉ POUR STABILISER LE TUNNEL TLS
+          echo "Stabilisation du tunnel en cours..."
+          sleep 3
+
       - name: Wait for cluster
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
