@@ -160,6 +160,15 @@ jobs:
             echo "Attente du tunnel SSM... ($i/10)"
             sleep 3
           done
+      
+      - name: Debug Kubeconfig & Cluster Connection
+        run: |
+          echo "=== CONTENU DU KUBECONFIG ==="
+          cat kubeconfig.yaml
+          echo "=== TEST LOCAL PORT 6443 ==="
+          nc -zv 127.0.0.1 6443 || true
+          echo "=== INFO KUBECTL ==="
+          kubectl cluster-info || true    
 
       - name: Wait for cluster
         run: kubectl get nodes --request-timeout=30s
