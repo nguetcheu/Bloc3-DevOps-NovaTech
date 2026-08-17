@@ -57,6 +57,18 @@ jobs:
       - name: Terraform Validate
         working-directory: ./terraform
         run: terraform validate
+      
+      - name: Import ECR Repositories
+        working-directory: ./terraform
+        run: |
+          echo "🔄 Importing existing ECR repositories..."
+          terraform import aws_ecr_repository.auth hrflow/auth || echo "⚠️ Already imported"
+          terraform import aws_ecr_repository.paie hrflow/paie || echo "⚠️ Already imported"
+          terraform import aws_ecr_repository.conges hrflow/conges || echo "⚠️ Already imported"
+          terraform import aws_ecr_repository.recrutement hrflow/recrutement || echo "⚠️ Already imported"
+          terraform import aws_ecr_repository.api_gateway hrflow/api-gateway || echo "⚠️ Already imported"
+          terraform import aws_ecr_repository.frontend hrflow/frontend || echo "⚠️ Already imported"
+          echo "✅ ECR repositories synchronized"
 
       - name: Terraform Plan
         working-directory: ./terraform
