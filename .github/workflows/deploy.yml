@@ -150,7 +150,15 @@ jobs:
       - name: Wait for cluster
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
-        run: kubectl get nodes --request-timeout=30s
+        run: |
+          # Affiche le contexte actif pour le debug
+          kubectl config current-context
+          kubectl config view
+          
+          # Force l'utilisation du serveur sur le port 6443 si besoin
+          kubectl config set-cluster default --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
+          
+          kubectl get nodes --request-timeout=30s
 
       - name: Install Traefik if missing
         run: |
