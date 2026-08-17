@@ -92,6 +92,11 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1b702e7feb7f # v4
 
+      - name: Install Session Manager plugin
+        run: |
+          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+          sudo dpkg -i session-manager-plugin.deb
+
       - name: Wait for SSM agent to register
         run: |
           echo "Waiting for instance to be managed by SSM..."
@@ -103,7 +108,7 @@ jobs:
               echo "SSM agent is online."
               break
             fi
-            echo "Attempt $i/30: SSM agent not ready yet (status: $STATUS)"
+            echo "Attempt $i/30: SSM agent not ready yet (status:$STATUS)"
             sleep 10
           done
 
@@ -128,11 +133,6 @@ jobs:
           kubectl --kubeconfig=kubeconfig.yaml config use-context k3s-context
 
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
-
-      - name: Install Session Manager plugin
-        run: |
-          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
-          sudo dpkg -i session-manager-plugin.deb
 
       - name: Start SSM port-forward tunnel to k3s API
         run: |
@@ -240,14 +240,14 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           for svc in auth paie conges recrutement; do
-            envsubst < k8s/$svc/deployment.yaml | kubectl apply -n ${{ env.NAMESPACE }} -f -
-            kubectl apply -f k8s/$svc/service.yaml -n ${{ env.NAMESPACE }}
+            envsubst < k8s/$svc/deployment.yaml \vert{} kubectl apply -n${{ env.NAMESPACE }} -f -
+            kubectl apply -f k8s/$svc/service.yaml -n${{ env.NAMESPACE }}
           done
 
       - name: Wait for backend services
         run: |
           for svc in auth paie conges recrutement; do
-            kubectl rollout status deployment/$svc -n ${{ env.NAMESPACE }} --timeout=120s
+            kubectl rollout status deployment/$svc -n${{ env.NAMESPACE }} --timeout=120s
           done
 
       - name: Deploy gateway
