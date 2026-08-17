@@ -10,7 +10,7 @@ output "aws_account_id" {
 
 terraform {
   backend "s3" {
-    bucket       = "hrflow-terraform-state-079716036671"
+    bucket       = "hrflow-terraform-state-nguetcheu"
     key          = "hrflow/terraform.tfstate"
     region       = "eu-west-3"
     encrypt      = true
