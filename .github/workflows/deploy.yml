@@ -112,6 +112,32 @@ jobs:
             sleep 10
           done
 
+      - name: Wait for K3s to be ready  
+        run: |
+          echo "Waiting for K3s to be ready..."
+          for i in $(seq 1 60); do
+            COMMAND_ID=$(aws ssm send-command \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters 'commands=["test -f /etc/rancher/k3s/k3s.yaml && cat /etc/rancher/k3s/k3s.yaml | wc -l"]' \
+              --query "Command.CommandId" --output text)
+
+            sleep 2
+
+            OUTPUT=$(aws ssm get-command-invocation \
+              --instance-id "$INSTANCE_ID" \
+              --command-id "$COMMAND_ID" \
+              --query "StandardOutputContent" --output text 2>/dev/null)
+
+            if [ ! -z "$OUTPUT" ] && [ "$OUTPUT" -gt 10 ]; then
+              echo "✓ K3s is ready ($(echo "$OUTPUT" | tr -d '\n') lines in kubeconfig)"
+              break
+            fi
+
+            echo "[$i/60] Waiting for K3s to create kubeconfig..."
+            sleep 5
+          done
+
       - name: Fetch kubeconfig via SSM
         run: |
           COMMAND_ID=$(aws ssm send-command \
