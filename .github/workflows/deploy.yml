@@ -127,10 +127,9 @@ jobs:
             --command-id "$COMMAND_ID" \
             --query "StandardOutputContent" --output text | tr -d '\r' > kubeconfig.yaml
 
-          # Forcer un nom de contexte propre et pointer vers le tunnel local 6443
-          kubectl --kubeconfig=kubeconfig.yaml config set-cluster k3s-cluster --server=https://127.0.0.1:6443 --insecure-skip-tls-verify=true
-          kubectl --kubeconfig=kubeconfig.yaml config set-context k3s-context --cluster=k3s-cluster --user=default
-          kubectl --kubeconfig=kubeconfig.yaml config use-context k3s-context
+          sed -i 's|server: https://.*:6443|server: https://127.0.0.1:6443|g' kubeconfig.yaml
+          sed -i 's|certificate-authority: /etc/rancher/k3s/k3s.crt|certificate-authority-data: |g' kubeconfig.yaml
+          sed -i 's|insecure-skip-tls-verify: false|insecure-skip-tls-verify: true|g' kubeconfig.yaml
 
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
 
