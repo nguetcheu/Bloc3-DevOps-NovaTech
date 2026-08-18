@@ -155,6 +155,17 @@ jobs:
           echo "Stabilisation du tunnel en cours..."
           sleep 3
 
+      - name: Debug kubeconfig
+        run: |
+          echo "=== KUBECONFIG path ==="
+          echo $KUBECONFIG
+          echo "=== File exists? ==="
+          ls -la $KUBECONFIG
+          echo "=== Server address ==="
+          grep "server:" $KUBECONFIG
+          echo "=== Current context ==="
+          kubectl config current-context    
+
       - name: Wait for cluster
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
