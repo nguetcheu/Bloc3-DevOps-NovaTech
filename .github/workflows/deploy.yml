@@ -120,27 +120,44 @@ jobs:
             --parameters 'commands=["sudo cat /etc/rancher/k3s/k3s.yaml"]' \
             --query "Command.CommandId" --output text)
 
-          # Attendre plus longtemps que le fichier soit prêt
-          for i in $(seq 1 10); do
-            sleep 2
-            OUTPUT=$(aws ssm get-command-invocation \
+          # Remplace le "sleep 6" fixe : on attend que la commande SSM soit
+          # réellement terminée (elle pouvait encore être "InProgress" après
+          # 6s, ce qui produisait un kubeconfig.yaml vide et faisait retomber
+          # kubectl sur son adresse par défaut http://localhost:8080).
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" || true
+
+          STATUS=$(aws ssm get-command-invocation \
+            --instance-id "$INSTANCE_ID" \
+            --command-id "$COMMAND_ID" \
+            --query "Status" --output text)
+
+          aws ssm get-command-invocation \
+            --instance-id "$INSTANCE_ID" \
+            --command-id "$COMMAND_ID" \
+            --query "StandardOutputContent" --output text | tr -d '\r' > kubeconfig.yaml
+
+          if [ "$STATUS" != "Success" ] || [ ! -s kubeconfig.yaml ] || ! grep -q "apiVersion" kubeconfig.yaml; then
+            echo "ERREUR : impossible de récupérer un kubeconfig valide via SSM (status: $STATUS)."
+            echo "--- contenu récupéré ---"
+            cat kubeconfig.yaml
+            echo "--- stderr de la commande SSM ---"
+            aws ssm get-command-invocation \
               --instance-id "$INSTANCE_ID" \
               --command-id "$COMMAND_ID" \
-              --query "StandardOutputContent" --output text 2>/dev/null)
-            
-            if [ ! -z "$OUTPUT" ] && [ ${#OUTPUT} -gt 10 ]; then
-              echo "$OUTPUT" | tr -d '\r' > kubeconfig.yaml
-              break
-            fi
-          done
-
-          # Vérifier que le fichier n'est pas vide
-          if [ ! -s kubeconfig.yaml ]; then
-            echo "ERROR: kubeconfig.yaml is empty"
+              --query "StandardErrorContent" --output text
             exit 1
           fi
 
           sed -i 's|server: https://.*:6443|server: https://127.0.0.1:6443|g' kubeconfig.yaml
+          # La ligne "certificate-authority-data: <base64>" (présente par défaut dans
+          # le k3s.yaml généré) n'était pas retirée par l'ancien sed, qui ne ciblait
+          # que "certificate-authority: <chemin>" (un format que k3s n'utilise pas).
+          # Résultat : certificate-authority-data restait en place en même temps que
+          # insecure-skip-tls-verify: true, une combinaison invalide pour kubectl.
+          sed -i '/certificate-authority-data:/d' kubeconfig.yaml
+          sed -i 's|certificate-authority: /etc/rancher/k3s/k3s.crt|certificate-authority-data: |g' kubeconfig.yaml
           sed -i 's|insecure-skip-tls-verify: false|insecure-skip-tls-verify: true|g' kubeconfig.yaml
 
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> "$GITHUB_ENV"
@@ -163,6 +180,12 @@ jobs:
             sleep 3
           done
 
+          if ! nc -z 127.0.0.1 6443 2>/dev/null; then
+            echo "ERREUR : le tunnel SSM n'a jamais ouvert le port 6443."
+            cat ssm-tunnel.log || true
+            exit 1
+          fi
+
           # AJOUTE CETTE PAUSE DE SÉCURITÉ POUR STABILISER LE TUNNEL TLS
           echo "Stabilisation du tunnel en cours..."
           sleep 3
@@ -176,13 +199,24 @@ jobs:
           echo "=== Server address ==="
           grep "server:" $KUBECONFIG
           echo "=== Current context ==="
-          kubectl config current-context    
+          kubectl config current-context
 
       - name: Wait for cluster
         env:
           KUBECONFIG: ${{ env.KUBECONFIG }}
-        run: 
-          kubectl --kubeconfig=$KUBECONFIG get nodes --request-timeout=30s
+        run: |
+          for i in $(seq 1 10); do
+            if kubectl --kubeconfig=$KUBECONFIG get nodes --request-timeout=10s; then
+              echo "Cluster joignable."
+              exit 0
+            fi
+            echo "Tentative $i/10 : cluster pas encore joignable via le tunnel SSM, nouvel essai..."
+            sleep 5
+          done
+
+          echo "ERREUR : impossible de joindre le cluster via le tunnel SSM après plusieurs tentatives."
+          cat ssm-tunnel.log || true
+          exit 1
 
       - name: Install Traefik if missing
         run: |
@@ -266,14 +300,14 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           for svc in auth paie conges recrutement; do
-            envsubst < k8s/$svc/deployment.yaml \vert{} kubectl apply -n${{ env.NAMESPACE }} -f -
-            kubectl apply -f k8s/$svc/service.yaml -n${{ env.NAMESPACE }}
+            envsubst < k8s/$svc/deployment.yaml | kubectl apply -n ${{ env.NAMESPACE }} -f -
+            kubectl apply -f k8s/$svc/service.yaml -n ${{ env.NAMESPACE }}
           done
 
       - name: Wait for backend services
         run: |
           for svc in auth paie conges recrutement; do
-            kubectl rollout status deployment/$svc -n${{ env.NAMESPACE }} --timeout=120s
+            kubectl rollout status deployment/$svc -n ${{ env.NAMESPACE }} --timeout=120s
           done
 
       - name: Deploy gateway
@@ -300,3 +334,4 @@ jobs:
       - name: Close SSM tunnel
         if: always()
         run: kill "$SSM_TUNNEL_PID" || true
+ 
