@@ -5,7 +5,7 @@ build/
 .env*
 !.env.pmn
 !.env.ci
-*.terraform.lock.hcl
 *.terraform
 *secret.auto.tfvars
-terraform/novatech-k3s-key.pem
+*.tfstate
+*.tfstate.*
