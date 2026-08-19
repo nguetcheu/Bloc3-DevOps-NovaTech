@@ -26,7 +26,7 @@ project_name = "hrflow-production"
 
 instance_type = "t4g.xlarge"
 
-key_name = "novatech-k3s-key"
+key_name = "novatech-k3s-key-v2"
 
 ssh_allowed_cidr = "176.138.144.165/32"
 
