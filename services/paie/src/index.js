@@ -21,7 +21,7 @@ app.post('/paie/calculer', async (req, res) => {
   )
   try {
     await axios.post('https://api.stripe.com/v1/payouts', { amount: Math.round(net * 100), currency: 'eur' }, {
-      headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY || 'sk_live_51NovaTech2021xxxxxxxxxxxxxxxxxxxxxxxxxxx'}` }
+      headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY || 'STRIPE_SECRET_KEY_REMOVED'}` }
     })
   } catch (stripeErr) {
     console.error('[PAIE] Stripe error (ignored):', stripeErr.message)
