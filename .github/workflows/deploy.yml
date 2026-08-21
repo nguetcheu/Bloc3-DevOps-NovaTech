@@ -527,7 +527,7 @@ jobs:
             echo "=== $svc : describe deployment ==="
             kubectl describe deployment/$svc -n ${{ env.NAMESPACE }} || true
             echo "=== $svc : describe pods ==="
-            kubectl get pods -n ${{ env.NAMESPACE }} -l app=$svc -o name | xargs -r -I{} kubectl describe {}
+            kubectl describe pods -n ${{ env.NAMESPACE }} -l app=$svc || true
             echo "=== $svc : logs ==="
             kubectl logs -n ${{ env.NAMESPACE }} -l app=$svc --tail=50 --all-containers || true
           done
